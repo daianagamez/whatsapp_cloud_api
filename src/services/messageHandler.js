@@ -8,7 +8,10 @@ class MessageHandler {
         if(this.isGreeting(incomingMessage)){
             await this.sendWelcomeMessage(message.from, message.id, senderInfo);
             await this.sendWelcomeMenu(message.from)
-        }else{
+        } else if(this.isMediaType(incomingMessage)){
+          await this.sendMedia(message.from, incomingMessage)
+        }
+        else{
             const response = `Probandoooo: ${message.text.body}`;
             await whatsappService.sendMessage(message.from, response, message.id);
         }
@@ -24,6 +27,11 @@ class MessageHandler {
   isGreeting(message){
     //validar que sea saludo de bienvenida
     const greetings = ["hola", "hello", "hi", "buenas tardes", "buenos dias", "holi"]
+    return greetings.includes(message)
+  }
+
+  isMediaType(message){
+    const greetings = ["audio", "image", "video", "document"]
     return greetings.includes(message)
   }
 
@@ -87,5 +95,38 @@ class MessageHandler {
     }
     await whatsappService.sendMessage(to, response)
   }
+
+  //Send multimedia messages
+  async sendMedia (to, type){
+    try{
+      let mediaUrl;
+      let caption;
+      let filename;
+
+      switch(type){
+        case "audio":
+          mediaUrl = "https://s3.amazonaws.com/gndx.dev/medpet-audio.aac";
+          break;
+        case "video":
+          mediaUrl = 'https://s3.amazonaws.com/gndx.dev/medpet-video.mp4';
+          caption = '¡Esto es una video!';
+          break;
+        case "document":
+          mediaUrl = 'https://s3.amazonaws.com/gndx.dev/medpet-file.pdf';
+          caption = '¡Esto es un PDF!'
+          filename = "dulcesorpresa.pdf"
+          break;
+        case "image":
+          mediaUrl = 'https://s3.amazonaws.com/gndx.dev/medpet-imagen.png';
+          caption = '¡Esto es una Imagen!'
+          break;
+      }
+
+      await whatsappService.sendMediaMessage(to, type, mediaUrl, caption, filename)
+
+    }catch(e){
+      console.error("Error in SendMedia: ", e)
+    }
+}
 }
 export default new MessageHandler();

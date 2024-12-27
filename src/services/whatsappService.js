@@ -70,6 +70,49 @@ class WhatsAppService {
             console.error("Error al enviar msm button: ", e)
         }
     }
+
+    //Enviar Mensajes Multimedia
+    async sendMediaMessage(to, type, mediaUrl, caption, filename){
+        try{
+            const mediaObject ={};
+
+            //identificar tipo de msg
+            switch(type){
+                case "image":
+                    mediaObject.image = {link: mediaUrl, caption: caption}
+                    break;
+                case "audio":  
+                    mediaObject.audio = {link:mediaUrl}
+                    break;
+                case "video":
+                    mediaObject.video = {link: mediaUrl}
+                    break;
+                case "document":
+                    mediaObject.document = {link: mediaUrl, caption: caption, filename: filename}
+                    break;
+                default:
+                    throw new Error ("Not soported media type")
+                    break;
+            }
+
+            const mensaje = await axios({
+                method: 'POST',
+                url: `https://graph.facebook.com/${config.API_VERSION}/${config.BUSINESS_PHONE}/messages`,
+                headers: {
+                    Authorization: `Bearer ${config.API_TOKEN}`,
+                },
+                data: {
+                    messaging_product: 'whatsapp',
+                    to,
+                    type: type,
+                    ...mediaObject
+                },
+            });
+
+        }catch(e){
+            console.error("Error sending media", e)
+        }
+    }
 }
 
 export default new WhatsAppService();
