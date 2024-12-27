@@ -97,6 +97,20 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons)
   }
 
+  //delivery options
+  async sendDeliveryOption(to){
+    const menuMessage = "¿Cómo desea retirar su pedido?"
+    const buttons = [
+        {
+            type: 'reply', reply: {id: 'delivery_option1', title: 'Retiro en Tienda'}
+        },
+        {
+            type: 'reply', reply: {id:'delivery_option2', title: 'Delivery'}
+        },
+    ];
+    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons)
+  }
+
 
   //Switch menu de opciones
   async handlerMenuOption(to, option){
@@ -115,6 +129,13 @@ class MessageHandler {
           this.orderState[to] = {step: "name"};
           response = "Por favor, ingresa tu nombre: "
           console
+          break;
+        case "delivery_option1":
+          this.orderState[to] = {deliveryAddress: "Retiro en tienda"};
+          response = await this.completeOrder(to)
+          break;
+        case "delivery_option2":
+          response = "Por favor, envia la dirección para la entrega."
           break;
         default:
             response = "Lo siento, no entendi tu seleccón. por favor, elige una de las opciones"
@@ -171,20 +192,49 @@ class MessageHandler {
         response = "¡Genial! ¿Tienes alguna preferencia de color o algún mensaje especial que quieras incluir? Si es así, por favor detállalo."
         break;
       case "orderDetails":
-        state.petType = message
-        state.step = "deliveryDetails"
-        response = "Ahora, por favor indícanos la fecha y dirección de entrega"
+        state.orderDetails = message
+        state.step = "orderDate"
+        response = "Perfecto, por favor indícanos la fecha en formato DD/MM/YYYY"
         break;
-      case "deliveryDetails":
-        state.petType = message
-        response = "Gracias por proporcionarnos toda la información. Nos pondremos en contacto contigo para confirmar los detalles del pago y la entrega."
-        delete this.orderState[to];
+      case "orderDate":
+        state.orderDate = message
+        state.step = "deliveryAddress"
+        await this.sendDeliveryOption(to);
+        return;
+      case "deliveryAddress":
+        state.deliveryAddress = message
+        response = await this.completeOrder(to)
         break;
       default:
         break;
     }
 
     await whatsappService.sendMessage(to, response)
+  }
+
+  async completeOrder(to){
+    const order = this.orderState[to];
+    delete this.orderState[to];
+
+    const userData = [
+      to,
+      order.name,
+      order.orderCategory,
+      order.orderDetails,
+      order.orderDate,
+      order.deliveryAddress
+    ]
+    console.log(userData);
+    return `Gracias por confiar en Dulce Sorpresa. 
+    Resumen de tu Pedido:
+    
+    Nombre: ${order.name}
+    Tipo de arreglo: ${order.orderCategory}
+    Detalles: ${order.orderDetails}
+    Fecha de Entrega: ${order.orderDate}
+    Retiro: ${order.deliveryAddress}
+    
+    Nos pondremos en contacto contigo pronto para confirmar los detalles del pago y la entrega.`
   }
 }
 export default new MessageHandler();
