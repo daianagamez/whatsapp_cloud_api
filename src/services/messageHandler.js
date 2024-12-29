@@ -1,4 +1,6 @@
 import whatsappService from './whatsappService.js';
+import appendToSheet from './googleSheetsService.js';
+
 class MessageHandler {
 
   constructor(){
@@ -131,7 +133,7 @@ class MessageHandler {
           console
           break;
         case "delivery_option1":
-          this.orderState[to] = {deliveryAddress: "Retiro en tienda"};
+          this.orderState[to].deliveryAddress = "Retiro en tienda";
           response = await this.completeOrder(to)
           break;
         case "delivery_option2":
@@ -224,7 +226,9 @@ class MessageHandler {
       order.orderDate,
       order.deliveryAddress
     ]
-    console.log(userData);
+
+    appendToSheet(userData)
+
     return `Gracias por confiar en Dulce Sorpresa. 
     Resumen de tu Pedido:
     
