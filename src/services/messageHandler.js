@@ -1,5 +1,6 @@
 import whatsappService from './whatsappService.js';
 import appendToSheet from './googleSheetsService.js';
+import openAIService from './openaAIService.js';
 
 class MessageHandler {
 
@@ -16,6 +17,8 @@ class MessageHandler {
         if(this.isGreeting(incomingMessage)){
             await this.sendWelcomeMessage(message.from, message.id, senderInfo);
             await this.sendWelcomeMenu(message.from)
+        } else if(incomingMessage=="menu"){
+          await this.sendWelcomeMenu(message.from)
         } else if(this.isMediaType(incomingMessage)){
           await this.sendMedia(message.from, incomingMessage)
         } else if(this.orderState[message.from]){
@@ -24,8 +27,7 @@ class MessageHandler {
           await this.handleOrderFlow(message.from, incomingMessage, "postre")
         }
         else{
-            const response = `Probandoooo: ${message.text.body}`;
-            await whatsappService.sendMessage(message.from, response, message.id);
+          await this.handleAssistantFlow(message.from, incomingMessage, message.id)
         }
         await whatsappService.markAsRead(message.id);
     }else if(message?.type === 'interactive'){
@@ -279,6 +281,11 @@ class MessageHandler {
     Retiro: ${order.deliveryAddress}
     
     Nos pondremos en contacto contigo pronto para confirmar los detalles del pago y la entrega.`
+  }
+
+  async handleAssistantFlow (to, message, messageId){
+    const response = await openAIService(message)
+    await whatsappService.sendMessage(to, response, messageId);
   }
 }
 export default new MessageHandler();
