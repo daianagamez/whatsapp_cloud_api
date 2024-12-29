@@ -5,6 +5,7 @@ class MessageHandler {
 
   constructor(){
     this.orderState ={};
+    this.dessertOrderStatus = {};
   }
 
   async handleIncomingMessage(message, senderInfo) {
@@ -18,7 +19,9 @@ class MessageHandler {
         } else if(this.isMediaType(incomingMessage)){
           await this.sendMedia(message.from, incomingMessage)
         } else if(this.orderState[message.from]){
-          await this.handleOrderFlow(message.from, incomingMessage)
+          await this.handleOrderFlow(message.from, incomingMessage, "arreglo")
+        } else if(this.dessertOrderStatus[message.from]){
+          await this.handleOrderFlow(message.from, incomingMessage, "postre")
         }
         else{
             const response = `Probandoooo: ${message.text.body}`;
@@ -132,6 +135,8 @@ class MessageHandler {
   async handlerMenuOption(to, option){
     let response;
     let urlCatalog; //Para pruebas se usan Urls temporales de canva :)
+    let state = (this.orderState[to]) ? this.orderState[to] : this.dessertOrderStatus[to];
+  
     switch(option){
         case "option1":
             response = "Catálogo"
@@ -146,10 +151,13 @@ class MessageHandler {
         case "order_option1":
           this.orderState[to] = {step: "name"};
           response = "Por favor, ingresa tu nombre: "
-          console
+          break;
+        case "order_option2":
+          this.dessertOrderStatus[to] = {step: "name"};
+          response = "Por favor, ingresa tu nombre para iniciar con el pedido."
           break;
         case "delivery_option1":
-          this.orderState[to].deliveryAddress = "Retiro en tienda";
+          state.deliveryAddress = "Retiro en tienda";
           response = await this.completeOrder(to)
           break;
         case "delivery_option2":
@@ -202,20 +210,21 @@ class MessageHandler {
     }
   }
 
-  async handleOrderFlow(to, message){
-    const state = this.orderState[to];
+  async handleOrderFlow(to, message, type){
+    let state = (type === "arreglo") ? this.orderState[to] : this.dessertOrderStatus[to];
+    //const state = this.orderState[to];
     let response;
 
     switch(state.step){
       case "name":
         state.name = message
         state.step = "orderCategory"
-        response = "Gracias, ¿Podrías indicarnos el tipo de arreglo que te interesa? Tenemos opciones como: Flores con Chocolates, Frutas Decoradas, y Dulces Temáticos. Por favor, escribe el nombre del arreglo"
+        response = `Gracias, ¿Podrías indicarnos el tipo de ${type} que te interesa? Tenemos diferentes opciones detalladas en el catálogo. Por favor, escribe el nombre del ${type} que deseas.`
         break;
       case "orderCategory":
         state.orderCategory = message
         state.step = "orderDetails"
-        response = "¡Genial! ¿Tienes alguna preferencia de color o algún mensaje especial que quieras incluir? Si es así, por favor detállalo."
+        response = "¡Excelente elección! ¿Hay algún detalle especial que te gustaría agregar, como un mensaje personalizado? Si es así, por favor detállalo"
         break;
       case "orderDetails":
         state.orderDetails = message
@@ -239,8 +248,15 @@ class MessageHandler {
   }
 
   async completeOrder(to){
-    const order = this.orderState[to];
-    delete this.orderState[to];
+    const order = (this.orderState[to]) ? this.orderState[to] : this.dessertOrderStatus[to];
+    let sheet;
+    if (this.orderState[to]) {
+      delete this.orderState[to];
+      sheet ="arreglos";
+  } else if (this.dessertOrderStatus[to]) {
+      delete this.dessertOrderStatus[to];
+      sheet = "postres"
+  }
 
     const userData = [
       to,
@@ -251,7 +267,7 @@ class MessageHandler {
       order.deliveryAddress
     ]
 
-    appendToSheet(userData)
+    appendToSheet(userData, sheet)
 
     return `Gracias por confiar en Dulce Sorpresa. 
     Resumen de tu Pedido:
