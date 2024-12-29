@@ -99,6 +99,20 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons)
   }
 
+    //order options
+    async sendCatalogOption(to){
+      const menuMessage = "¿De cuál de nuestros servicios te gustaria obtener el catálogo?"
+      const buttons = [
+          {
+              type: 'reply', reply: {id: 'catalog_option1', title: 'Arreglos'}
+          },
+          {
+              type: 'reply', reply: {id:'catalog_option2', title: 'Postres'}
+          },
+      ];
+      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons)
+    }
+
   //delivery options
   async sendDeliveryOption(to){
     const menuMessage = "¿Cómo desea retirar su pedido?"
@@ -117,10 +131,12 @@ class MessageHandler {
   //Switch menu de opciones
   async handlerMenuOption(to, option){
     let response;
+    let urlCatalog; //Para pruebas se usan Urls temporales de canva :)
     switch(option){
         case "option1":
             response = "Catálogo"
-            break;
+            await this.sendCatalogOption(to) //Otra opción es un pdf que tenga todos los productos/servicios y se envia directamrne
+            return;
         case "option2":
             await this.sendOrderOption(to)
             return;
@@ -139,6 +155,14 @@ class MessageHandler {
         case "delivery_option2":
           response = "Por favor, envia la dirección para la entrega."
           break;
+        case "catalog_option1":
+          urlCatalog = "https://media.canva.com/v2/image-resize/format:PNG/height:550/quality:100/uri:s3%3A%2F%2Fmedia-private.canva.com%2FQWP0c%2FMAGapKQWP0c%2F1%2Fp.png/watermark:F/width:388?csig=AAAAAAAAAAAAAAAAAAAAAKIhALWDl2mz_tkNQefVi5mYzz76FRpJhk2m044SC_yM&exp=1735499565&osig=AAAAAAAAAAAAAAAAAAAAAOOGNxaDOIalgMXBvUXjlnneZAY3Px4QYDzfvg5qtx_9&signer=media-rpc&x-canva-quality=thumbnail_large"
+          whatsappService.sendMediaMessage(to, "image", urlCatalog, "¡Aquí puedes ver las distintas opciones de arreglos!")
+          return;
+        case "catalog_option2":
+          urlCatalog = "https://media.canva.com/v2/image-resize/format:PNG/height:550/quality:100/uri:s3%3A%2F%2Fmedia-private.canva.com%2F_orbw%2FMAGapC_orbw%2F1%2Fp.png/watermark:F/width:388?csig=AAAAAAAAAAAAAAAAAAAAACAA4ljqygjs_YshF_z7QiMSlJO75bfJoBPrET0A7WdP&exp=1735502001&osig=AAAAAAAAAAAAAAAAAAAAAHnMS0gN_2Be16Z9S5Ac4wCfKSf0Eobj8ioUMvx06j3a&signer=media-rpc&x-canva-quality=thumbnail_large"
+          whatsappService.sendMediaMessage(to, "image", urlCatalog, "¡Nuestros deliciosos postres!")
+          return;
         default:
             response = "Lo siento, no entendi tu seleccón. por favor, elige una de las opciones"
     }
