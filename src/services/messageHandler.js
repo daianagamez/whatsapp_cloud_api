@@ -141,8 +141,8 @@ class MessageHandler {
             await this.sendOrderOption(to)
             return;
         case "option3":
-            response = "Esta es mi Ubicación"
-            break;
+          whatsappService.sendMediaMessage(to, "location", "", "", "", "7.846782", "-72.175128", "Dulce Sorpresa", "Lomas Blancas, 200 metros bajando de la Esguarnac Cordero")
+          return;
         case "order_option1":
           this.orderState[to] = {step: "name"};
           response = "Por favor, ingresa tu nombre: "

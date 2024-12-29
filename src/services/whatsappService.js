@@ -71,8 +71,8 @@ class WhatsAppService {
         }
     }
 
-    //Enviar Mensajes Multimedia
-    async sendMediaMessage(to, type, mediaUrl, caption, filename){
+    //Enviar Mensajes Multimedia y mapa
+    async sendMediaMessage(to, type, mediaUrl, caption, filename, latitude, longitude, name, address){
         try{
             const mediaObject ={};
 
@@ -89,6 +89,9 @@ class WhatsAppService {
                     break;
                 case "document":
                     mediaObject.document = {link: mediaUrl, caption: caption, filename: filename}
+                    break;
+                case "location":
+                    mediaObject.location = {latitude: latitude, longitude: longitude, name: name, address: address}
                     break;
                 default:
                     throw new Error ("Not soported media type")
