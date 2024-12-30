@@ -116,6 +116,26 @@ class WhatsAppService {
             console.error("Error sending media", e)
         }
     }
+
+    async sendContactMessage(to, contact) {
+        try {
+          await axios({
+            method: 'POST',
+            url: `https://graph.facebook.com/${config.API_VERSION}/${config.BUSINESS_PHONE}/messages`,
+            headers: {
+              Authorization: `Bearer ${config.API_TOKEN}`,
+            },
+            data: {
+              messaging_product: 'whatsapp',
+              to,
+              type: 'contacts',
+              contacts: [contact]
+            },
+          });
+        } catch (e) {
+          console.error("Error en sendContactMessage: ", e)
+        }
+      }
 }
 
 export default new WhatsAppService();

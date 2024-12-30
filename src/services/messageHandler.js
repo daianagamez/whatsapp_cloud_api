@@ -19,7 +19,9 @@ class MessageHandler {
             await this.sendWelcomeMenu(message.from)
         } else if(incomingMessage=="menu"){
           await this.sendWelcomeMenu(message.from)
-        } else if(this.isMediaType(incomingMessage)){
+        } else if(incomingMessage=="contacto"){
+          await this.sendContact(message.from)
+        }else if(this.isMediaType(incomingMessage)){
           await this.sendMedia(message.from, incomingMessage)
         } else if(this.orderState[message.from]){
           await this.handleOrderFlow(message.from, incomingMessage, "arreglo")
@@ -138,6 +140,7 @@ class MessageHandler {
     let response;
     let urlCatalog; //Para pruebas se usan Urls temporales de canva :)
     let state = (this.orderState[to]) ? this.orderState[to] : this.dessertOrderStatus[to];
+    let finalOrder;
   
     switch(option){
         case "option1":
@@ -150,6 +153,9 @@ class MessageHandler {
         case "option3":
           whatsappService.sendMediaMessage(to, "location", "", "", "", "7.846782", "-72.175128", "Dulce Sorpresa", "Lomas Blancas, 200 metros bajando de la Esguarnac Cordero")
           return;
+        case "option4":
+          await this.sendContact(to)
+          return;
         case "order_option1":
           this.orderState[to] = {step: "name"};
           response = "Por favor, ingresa tu nombre: "
@@ -161,6 +167,7 @@ class MessageHandler {
         case "delivery_option1":
           state.deliveryAddress = "Retiro en tienda";
           response = await this.completeOrder(to)
+          finalOrder = true;
           break;
         case "delivery_option2":
           response = "Por favor, envia la dirección para la entrega."
@@ -177,6 +184,8 @@ class MessageHandler {
             response = "Lo siento, no entendi tu seleccón. por favor, elige una de las opciones"
     }
     await whatsappService.sendMessage(to, response)
+    if(finalOrder)
+      await whatsappService.sendInteractiveButtons(to, "Nuestra información de contacto 💗", [{ type: 'reply', reply: {id: 'option4', title: 'Contacto'}}])
   }
 
   //Send multimedia messages
@@ -216,6 +225,7 @@ class MessageHandler {
     let state = (type === "arreglo") ? this.orderState[to] : this.dessertOrderStatus[to];
     //const state = this.orderState[to];
     let response;
+    let final;
 
     switch(state.step){
       case "name":
@@ -241,12 +251,15 @@ class MessageHandler {
       case "deliveryAddress":
         state.deliveryAddress = message
         response = await this.completeOrder(to)
+        final = true;
         break;
       default:
         break;
     }
 
     await whatsappService.sendMessage(to, response)
+    if(final)
+      await whatsappService.sendInteractiveButtons(to, "Nuestra información de contacto 💗", [{ type: 'reply', reply: {id: 'option4', title: 'Contacto'}}])
   }
 
   async completeOrder(to){
@@ -271,21 +284,72 @@ class MessageHandler {
 
     appendToSheet(userData, sheet)
 
-    return `Gracias por confiar en Dulce Sorpresa. 
-    Resumen de tu Pedido:
+    return `Gracias por confiar en Dulce Sorpresa. ✨✨ 
+
+    *Resumen de tu Pedido:*
+      - *Nombre:* ${order.name}
+      - *Tipo de arreglo:* ${order.orderCategory}
+      - *Detalles:* ${order.orderDetails}
+      - *Fecha de Entrega:* ${order.orderDate}
+      - *Retiro:* ${order.deliveryAddress}
     
-    Nombre: ${order.name}
-    Tipo de arreglo: ${order.orderCategory}
-    Detalles: ${order.orderDetails}
-    Fecha de Entrega: ${order.orderDate}
-    Retiro: ${order.deliveryAddress}
-    
-    Nos pondremos en contacto contigo pronto para confirmar los detalles del pago y la entrega.`
+Nos pondremos en contacto contigo pronto para confirmar los detalles del pago y la entrega.
+  
+Si quieres realizar algun cambio o recibir información sobre tu pedido puedes escrbir en culaquier momento *"contacto"* o hacer click en el botón.`
   }
 
   async handleAssistantFlow (to, message, messageId){
     const response = await openAIService(message)
     await whatsappService.sendMessage(to, response, messageId);
+  }
+
+  async sendContact(to){
+    const contact = {
+      addresses: [
+        {
+          street: "Via principal",
+          city: "Lomas Blancas",
+          state: "Táchira",
+          zip: "5012",
+          country: "Venezuela",
+          country_code: "VE",
+          type: "WORK"
+        }
+      ],
+      emails: [
+        {
+          email: "contacto@dulcesorpresa.com",
+          type: "WORK"
+        }
+      ],
+      name: {
+        formatted_name: "DulceSospresa Contacto",
+        first_name: "Dulce Sospresa",
+        last_name: "Contacto",
+        middle_name: "",
+        suffix: "",
+        prefix: ""
+      },
+      org: {
+        company: "DulceSorpresa",
+        department: "Atención al Cliente",
+        title: "Representante"
+      },
+      phones: [
+        {
+          phone: "+15551706640",
+          wa_id: "15551706640",
+          type: "WORK"
+        }
+      ],
+      urls: [
+        {
+          url: "https://www.dulcesorpresa.com",
+          type: "WORK"
+        }
+      ]
+    };
+    await whatsappService.sendContactMessage(to, contact);
   }
 }
 export default new MessageHandler();
