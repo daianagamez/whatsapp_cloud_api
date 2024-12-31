@@ -181,6 +181,7 @@ class MessageHandler {
           nameValidation = await appendToSheet(to, "contactos", "GET");
           if(nameValidation){
             this.orderState[to] = {step: "orderCategory"};
+            this.orderState[to].name = nameValidation;
             response = "¿Podrías indicarnos el tipo de arreglo que te interesa? Tenemos diferentes opciones detalladas en el catálogo. Por favor, escribe el nombre."
           }else{
             this.orderState[to] = {step: "name"};
@@ -191,6 +192,7 @@ class MessageHandler {
           nameValidation = await appendToSheet(to, "contactos", "GET");
           if(nameValidation){
             this.dessertOrderStatus[to] = {step: "orderCategory"}
+            this.dessertOrderStatus[to].name = nameValidation;
             response = "¿Podrías indicarnos el tipo de postre que te interesa? Tenemos diferentes opciones detalladas en el catálogo. Por favor, escribe el nombre."
           }else{
             this.dessertOrderStatus[to] = {step: "name"};
@@ -198,11 +200,15 @@ class MessageHandler {
           }
           break;
         case "delivery_option1":
+          if (!state)
+            return   
           state.deliveryAddress = "Retiro en tienda";
           response = await this.completeOrder(to)
           finalOrder = true;
           break;
         case "delivery_option2":
+          if (!state)
+            return
           response = "Por favor, envia la dirección para la entrega."
           break;
         case "catalog_option1":
