@@ -12,7 +12,7 @@ class MessageHandler {
   async handleIncomingMessage(message, senderInfo) {
     if (message?.type === 'text') {
         //Validación de Saludo
-        const incomingMessage = message.text.body.toLowerCase().trim();
+        const incomingMessage = this.normalizeText(message.text.body.toLowerCase().trim());
 
         if(this.isGreeting(incomingMessage)){
             await this.sendWelcomeMessage(message.from, message.id, senderInfo);
@@ -40,6 +40,11 @@ class MessageHandler {
     }
   }
 
+  //Eliminar acentos
+  normalizeText(text) {
+    return text.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+  }
+
   isGreeting(message){
     //validar que sea saludo de bienvenida
     const greetings = ["hola", "hello", "hi", "buenas tardes", "buenos dias", "holi"]
@@ -55,23 +60,37 @@ class MessageHandler {
     return senderInfo.profile?.name || senderInfo.wa_id || "";
   }
 
-  nameFormat(name){
+  async nameFormat(name){
     //Eliminar emojis y caracteres especiales no alfabeticos
     const nameSinEmojis = name.replace(/[^a-zA-Z\s]/g, '');
     //Dividir el nombre el palabras
     const palabras = nameSinEmojis.split(' ');
     //Si hay más de una palabra "nombre y apellido", devolver solo la primera "nombre"
-    return palabras.length > 1 ? palabras[0] : nameSinEmojis;
-
-    //Validación con IA o en su defecto pedir directamente que devuelva el nombre
+    const primeraPalabra = palabras.length > 1 ? palabras[0] : nameSinEmojis;
+    //Primera Letra mayuscula
+    const nombre = primeraPalabra.charAt(0).toUpperCase() + primeraPalabra.slice(1).toLowerCase();
+    //Validación con IA
+    const peticion = `Verifica si el siguiente texto es un nombre válido de cliente o persona. Responde únicamente con 'true' si es válido o 'false' si no lo es, sin proporcionar comentarios adicionales. No se consideran válidos nombres como 'Dios', iniciales, ni otros casos similares.
+    Texto a evaluar: ${nombre}`
+    const validacion = await openAIService(peticion);
+    
+    console.log("validacion nombre: ", validacion)
+    if (validacion.toLowerCase().includes("true")){
+      return `¡Hola ${nombre}!`
+    }else{
+      return "¡Hola!"
+    }
   }
 
   //Funcion para enviar mensaje de bienvenida
   async sendWelcomeMessage(to, messageId, senderInfo){
     console.log ("senderInfo: ", senderInfo);
-    let name = this.getSenderName(senderInfo);
-    name = this.nameFormat(name);
-    const welcomeMessage = `Hola ${name}, bienvenido a Dulce Sorpresa 💗\n¿En qué puedo ayudarle hoy?`
+    let name = await appendToSheet(to, "contactos", "GET")
+    if(!name){
+      name = this.getSenderName(senderInfo);
+    }
+    name = await this.nameFormat(name);
+    const welcomeMessage = `${name} bienvenido a Dulce Sorpresa 💗\n¿En qué puedo ayudarle hoy?`
     await whatsappService.sendMessage(to, welcomeMessage, messageId)
   }
 
@@ -141,6 +160,7 @@ class MessageHandler {
     let urlCatalog; //Para pruebas se usan Urls temporales de canva :)
     let state = (this.orderState[to]) ? this.orderState[to] : this.dessertOrderStatus[to];
     let finalOrder;
+    let nameValidation;
   
     switch(option){
         case "option1":
@@ -157,12 +177,25 @@ class MessageHandler {
           await this.sendContact(to)
           return;
         case "order_option1":
-          this.orderState[to] = {step: "name"};
-          response = "Por favor, ingresa tu nombre: "
+          //Consultar si ya tenemos el nombre en nuestra hoja de contactos
+          nameValidation = await appendToSheet(to, "contactos", "GET");
+          if(nameValidation){
+            this.orderState[to] = {step: "orderCategory"};
+            response = "¿Podrías indicarnos el tipo de arreglo que te interesa? Tenemos diferentes opciones detalladas en el catálogo. Por favor, escribe el nombre."
+          }else{
+            this.orderState[to] = {step: "name"};
+            response = "Por favor, ingresa tu nombre: "
+          }
           break;
         case "order_option2":
-          this.dessertOrderStatus[to] = {step: "name"};
-          response = "Por favor, ingresa tu nombre para iniciar con el pedido."
+          nameValidation = await appendToSheet(to, "contactos", "GET");
+          if(nameValidation){
+            this.dessertOrderStatus[to] = {step: "orderCategory"}
+            response = "¿Podrías indicarnos el tipo de postre que te interesa? Tenemos diferentes opciones detalladas en el catálogo. Por favor, escribe el nombre."
+          }else{
+            this.dessertOrderStatus[to] = {step: "name"};
+            response = "Por favor, ingresa tu nombre para iniciar con el pedido."
+          }
           break;
         case "delivery_option1":
           state.deliveryAddress = "Retiro en tienda";
@@ -230,6 +263,13 @@ class MessageHandler {
     switch(state.step){
       case "name":
         state.name = message
+        //Guardar el contacto en googleSheets
+        const userData = [
+          to,
+          message
+        ]
+        appendToSheet(userData, "contactos", "ADD")
+        //Cotinuar con el flujo
         state.step = "orderCategory"
         response = `Gracias, ¿Podrías indicarnos el tipo de ${type} que te interesa? Tenemos diferentes opciones detalladas en el catálogo. Por favor, escribe el nombre del ${type} que deseas.`
         break;
@@ -282,7 +322,7 @@ class MessageHandler {
       order.deliveryAddress
     ]
 
-    appendToSheet(userData, sheet)
+    appendToSheet(userData, sheet, "ADD")
 
     return `Gracias por confiar en Dulce Sorpresa. ✨✨ 
 
